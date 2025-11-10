@@ -6,73 +6,75 @@ import matplotlib.pyplot as plt
 def main():
     print("Loading data")
     df = pd.read_csv(sys.stdin)
+    df = df.apply(pd.to_numeric, errors="coerce")  # convert all columns to numeric
 
-    for col in df.columns:
-        df[col] = pd.to_numeric(df[col], errors="coerce")
+    # Columns
+    float_cols = ["exp_fast_float", "exp_very_fast_float"]
+    double_cols = ["exp_float", "exp_fast_double", "exp_very_fast_double"]
+    all_cols = float_cols + double_cols
 
-    df["exp_fast_float_err"] = df["exp_fast_float"] - df["exp_float"]
-    df["exp_fast_float_rerr"] = df["exp_fast_float_err"] / df["exp_float"]
-    df["exp_very_fast_float_err"] = df["exp_very_fast_float"] - df["exp_float"]
-    df["exp_very_fast_float_rerr"] = df["exp_very_fast_float_err"] / df["exp_float"]
+    # Compute relative errors
+    for col in float_cols:
+        df[f"{col}_rerr"] = (df[col] - df["exp_float"]) / df["exp_float"]
+    for col in double_cols:
+        df[f"{col}_rerr"] = (df[col] - df["exp_double"]) / df["exp_double"]
 
-    df["exp_float_err"] = df["exp_float"] - df["exp_double"]
-    df["exp_float_rerr"] = df["exp_float_err"] / df["exp_double"]
-    df["exp_fast_double_err"] = df["exp_fast_double"] - df["exp_double"]
-    df["exp_fast_double_rerr"] = df["exp_fast_double_err"] / df["exp_double"]
-    df["exp_very_fast_double_err"] = df["exp_very_fast_double"] - df["exp_double"]
-    df["exp_very_fast_double_rerr"] = df["exp_very_fast_double_err"] / df["exp_double"]
+    # Determine rolling window size in samples for rolling max
+    x_spacing = df["x_float"].iloc[1] - df["x_float"].iloc[0]  # uniform spacing
+    width = 2.0  # desired window width in x units
+    window_size = max(1, int(width / x_spacing))  # at least 1 sample
 
-    print("Plotting data")
+    # Create figure with three subplots
+    fig, axes = plt.subplots(3, 1, figsize=(10, 15))
+    fig.suptitle("Exponential Function Relative Errors", fontsize=16)
 
-    plt.style.use("seaborn-v0_8-darkgrid")
-    fig, axes = plt.subplots(2, 1, figsize=(10, 10))
-    fig.suptitle("Analysis of Exponential Function Results", fontsize=16)
-
-    axes[0].plot(
-        df["x_float"],
-        df["exp_fast_float_rerr"],
-        marker=".",
-        markersize=2,
-        linestyle=":",
-        label="Fast Float Relative Error",
+    # --- Top plot: rolling max of absolute relative error ---
+    for col in all_cols:
+        rolling_max = (
+            df[f"{col}_rerr"]
+            .abs()
+            .rolling(window=window_size, min_periods=window_size)
+            .max()
+        )
+        axes[0].plot(df["x_float"], rolling_max, label=col)
+    axes[0].set_xlabel("x")
+    axes[0].set_ylabel(f"Rolling Max |Relative Error| (width={width})")
+    axes[0].legend(
+        bbox_to_anchor=(1.05, 1),
+        loc="upper left",
+        fontsize=8,
+        borderaxespad=0,
+        frameon=True,
     )
-    axes[0].plot(
-        df["x_float"],
-        df["exp_very_fast_float_rerr"],
-        marker=".",
-        markersize=2,
-        linestyle="-.",
-        label="Very Fast Float Relative Error",
-    )
-    axes[0].legend()
 
-    axes[1].plot(
-        df["x_double"],
-        df["exp_float_rerr"],
-        marker=".",
-        markersize=2,
-        linestyle=":",
-        label="Float Relative Error",
+    # --- Middle plot: original raw relative error ---
+    for col in all_cols:
+        axes[1].plot(df["x_float"], df[f"{col}_rerr"], label=col)
+    axes[1].set_xlabel("x")
+    axes[1].set_ylabel("Relative Error")
+    axes[1].legend(
+        bbox_to_anchor=(1.05, 1),
+        loc="upper left",
+        fontsize=8,
+        borderaxespad=0,
+        frameon=True,
     )
-    axes[1].plot(
-        df["x_double"],
-        df["exp_fast_double_rerr"],
-        marker=".",
-        markersize=2,
-        linestyle=":",
-        label="Fast Double Relative Error",
-    )
-    axes[1].plot(
-        df["x_double"],
-        df["exp_very_fast_double_rerr"],
-        marker=".",
-        markersize=2,
-        linestyle="-.",
-        label="Very Fast Double Relative Error",
-    )
-    axes[1].legend()
 
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    # --- Bottom plot: zoomed-in x ∈ [0, 2] ---
+    for col in all_cols:
+        axes[2].plot(df["x_float"], df[f"{col}_rerr"], label=col)
+    axes[2].set_xlim(0, 2)
+    axes[2].set_xlabel("x")
+    axes[2].set_ylabel("Relative Error")
+    axes[2].legend(
+        bbox_to_anchor=(1.05, 1),
+        loc="upper left",
+        fontsize=8,
+        borderaxespad=0,
+        frameon=True,
+    )
+
+    plt.tight_layout(rect=[0, 0.03, 0.85, 0.95])
     plt.show()
 
 

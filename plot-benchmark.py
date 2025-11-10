@@ -13,15 +13,15 @@ def main():
     data = []
     for match in re.finditer(pattern, text):
         name, value, unit = match.groups()
-        value = float(value) * (1e3 if unit == "G" else 1.0)  # convert G/s → 1000 M/s
+        value = float(value) * (1e9 if unit == "G" else 1e6)
         bench, size = name.rsplit("/", 1)
         data.append((bench, int(size), value))
 
-    df = pd.DataFrame(data, columns=["Benchmark", "Size", "Throughput_Mps"])
+    df = pd.DataFrame(data, columns=["Benchmark", "Size", "Throughput"])
 
     # Compute throughput at maximum size for each benchmark
     max_vals = df.loc[df.groupby("Benchmark")["Size"].idxmax()].set_index("Benchmark")[
-        "Throughput_Mps"
+        "Throughput"
     ]
 
     # Create color mapping based on ranking
@@ -35,7 +35,7 @@ def main():
     for bench, subdf in df.groupby("Benchmark"):
         (line,) = ax.plot(
             subdf["Size"],
-            subdf["Throughput_Mps"],
+            subdf["Throughput"],
             label=bench,
             color=color_map[bench],
             alpha=0.8,
@@ -43,9 +43,9 @@ def main():
         lines.append((bench, line))
 
     ax.set_xscale("log", base=2)
-    ax.set_yscale("log", base=2)
+    ax.set_yscale("log", base=10)
     ax.set_xlabel("Input Size")
-    ax.set_ylabel("Throughput (Million items/s)")
+    ax.set_ylabel("Throughput (exp/s)")
     ax.set_title("Benchmark Throughput vs Input Size")
 
     # Order legend by throughput at maximum size
