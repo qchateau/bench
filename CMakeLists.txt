@@ -24,6 +24,7 @@ FetchContent_MakeAvailable(benchmark)
 add_executable(
     expbench
     expbench.cpp
+    expbench_fm.cpp
 )
 target_link_libraries(
     expbench
@@ -34,6 +35,11 @@ target_link_libraries(
 target_compile_options(
     expbench
     PRIVATE -march=native
+)
+set_source_files_properties(
+    expbench_fm.cpp
+    PROPERTIES
+    COMPILE_FLAGS "-ffast-math"
 )
 
 
