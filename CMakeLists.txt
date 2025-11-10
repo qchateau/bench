@@ -42,8 +42,17 @@ set_source_files_properties(
     COMPILE_FLAGS "-ffast-math"
 )
 
-
 add_executable(
     csv
     csv.cpp
+    csv_fm.cpp
+)
+target_compile_options(
+    csv
+    PRIVATE -march=native
+)
+set_source_files_properties(
+    csv_fm.cpp
+    PROPERTIES
+    COMPILE_FLAGS "-ffast-math"
 )
